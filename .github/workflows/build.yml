@@ -1,0 +1,76 @@
+name: Build Cross-Platform Distributables
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: Build macOS DMG
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binary & DMG
+        run: |
+          cargo build --release -p kvm-daemon
+          ./build_dmg.sh
+
+      - name: Upload macOS DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cross-KVM-macOS-DMG
+          path: Cross-KVM.dmg
+
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Windows EXE
+        shell: cmd
+        run: |
+          cargo build --release -p kvm-daemon
+          copy target\release\kvm-daemon.exe Cross-KVM.exe
+
+      - name: Upload Windows EXE Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cross-KVM-Windows-EXE
+          path: Cross-KVM.exe
+
+  release:
+    name: Create GitHub Release
+    needs: [build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: Cross-KVM-macOS-DMG
+
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: Cross-KVM-Windows-EXE
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Cross-KVM.dmg
+            Cross-KVM.exe
