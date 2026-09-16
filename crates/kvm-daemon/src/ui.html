@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cross-KVM | Monitor Arrangement & Control Center</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .grid-bg {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(120, 120, 120, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120, 120, 120, 0.1) 1px, transparent 1px);
+    }
+    .monitor-card {
+      user-select: none;
+      touch-action: none;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .monitor-card:active {
+      cursor: grabbing !important;
+    }
+    .edge-glow {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] min-h-screen p-6 antialiased flex flex-col gap-6">
+
+  <!-- Header Section -->
+  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
+        ⇄
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold tracking-tight text-[var(--foreground)]">Cross-KVM Studio</h1>
+          <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            Daemon Active
+          </span>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)]">Arrange your screens to seamlessly share your mouse & keyboard across Mac, Windows & Linux</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button id="resetLayoutBtn" class="px-3.5 py-2 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--content)] transition">
+        Reset to Default
+      </button>
+      <button id="addPeerBtn" class="px-3.5 py-2 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--content)] transition flex items-center gap-1.5">
+        <span>+</span> Add Windows/Linux Peer
+      </button>
+      <button id="saveConfigBtn" class="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow transition flex items-center gap-1.5">
+        <span>✓</span> Apply & Save Topology
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Canvas & Controls Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
+
+    <!-- Interactive Monitor Grid Canvas (Span 3 cols) -->
+    <div class="lg:col-span-3 flex flex-col bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+      <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+        <div>
+          <h2 class="text-sm font-semibold text-[var(--foreground)]">Display Arrangement Canvas</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Drag monitors to align them with your physical desk setup</p>
+        </div>
+        <div class="flex items-center gap-4 text-xs">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="snapToGrid" checked class="rounded border-[var(--border)] accent-blue-600">
+            <span class="text-[var(--muted-foreground)]">Magnetic Edge Snapping</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="simCursorMode" class="rounded border-[var(--border)] accent-blue-600">
+            <span class="text-[var(--muted-foreground)]">Test Cursor Simulation</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Canvas Area -->
+      <div id="canvasContainer" class="relative flex-1 min-h-[440px] mt-4 rounded-xl border border-[var(--border)] grid-bg overflow-hidden flex items-center justify-center">
+        <!-- Floating Canvas Stage -->
+        <div id="stage" class="relative w-full h-full">
+
+          <!-- Monitor 1: Mac Primary (3840x1080 ultrawide / dual) -->
+          <div id="mon-mac-primary" class="monitor-card absolute rounded-xl p-3 border-2 border-blue-500 bg-blue-950/40 cursor-grab flex flex-col justify-between shadow-lg"
+               style="left: 60px; top: 100px; width: 260px; height: 160px;"
+               data-id="mac-1" data-name="MacBook / Primary" data-res="3840 × 1080" data-os="macOS">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/30 text-blue-300 border border-blue-400/30">
+                 Mac (Local Host)
+              </span>
+              <span class="text-[10px] text-blue-200/80 font-mono">Primary #1</span>
+            </div>
+            <div class="text-center my-auto">
+              <div class="text-lg font-bold text-blue-100">3840 × 1080</div>
+              <div class="text-[11px] text-blue-300/70 font-mono mt-0.5">Scale: 2.0x (Retina)</div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-blue-200/60 font-mono">
+              <span class="coord-label">X: 0, Y: 0</span>
+              <span>120 Hz</span>
+            </div>
+          </div>
+
+          <!-- Monitor 2: Mac Secondary (1920x1080) -->
+          <div id="mon-mac-secondary" class="monitor-card absolute rounded-xl p-3 border-2 border-blue-400/60 bg-blue-900/30 cursor-grab flex flex-col justify-between shadow-md"
+               style="left: 330px; top: 100px; width: 180px; height: 160px;"
+               data-id="mac-2" data-name="Mac Secondary" data-res="1920 × 1080" data-os="macOS">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300">
+                 Mac Extended
+              </span>
+              <span class="text-[10px] text-blue-200/80 font-mono">#2</span>
+            </div>
+            <div class="text-center my-auto">
+              <div class="text-base font-bold text-blue-100">1920 × 1080</div>
+              <div class="text-[11px] text-blue-300/70 font-mono mt-0.5">Scale: 1.0x</div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-blue-200/60 font-mono">
+              <span class="coord-label">X: 3840, Y: 0</span>
+              <span>60 Hz</span>
+            </div>
+          </div>
+
+          <!-- Monitor 3: Remote Windows PC (1920x1080) -->
+          <div id="mon-win-pc" class="monitor-card absolute rounded-xl p-3 border-2 border-amber-500/80 bg-amber-950/40 cursor-grab flex flex-col justify-between shadow-md"
+               style="left: 520px; top: 100px; width: 180px; height: 160px;"
+               data-id="win-1" data-name="Windows Workstation" data-res="1920 × 1080" data-os="Windows">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/30 text-amber-300 border border-amber-400/30">
+                ⊞ Windows PC
+              </span>
+              <span class="text-[10px] text-amber-200/80 font-mono">LAN Peer</span>
+            </div>
+            <div class="text-center my-auto">
+              <div class="text-base font-bold text-amber-100">1920 × 1080</div>
+              <div class="text-[11px] text-amber-300/70 font-mono mt-0.5">Peer: win-desktop</div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-amber-200/60 font-mono">
+              <span class="coord-label">Right Neighbor</span>
+              <span class="text-emerald-400">● 1.2ms</span>
+            </div>
+          </div>
+
+          <!-- Interactive Test Cursor Dot -->
+          <div id="testCursor" class="hidden absolute w-5 h-5 rounded-full bg-red-500 border-2 border-white shadow-xl z-50 pointer-events-none -translate-x-1/2 -translate-y-1/2">
+            <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold bg-black/80 px-1.5 py-0.5 rounded text-white whitespace-nowrap">
+              Cursor
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Live Boundary Transition Indicator -->
+      <div id="transitionLog" class="mt-4 p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between text-xs font-mono">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+          <span id="logStatusText" class="text-[var(--foreground)]">Active Topology: Moving mouse across Right Edge will jump to [Windows Workstation]</span>
+        </div>
+        <span id="calcDetails" class="text-[var(--muted-foreground)] text-[11px]">Normalized Ratio: 0.50 ➔ Remote Y: 540px</span>
+      </div>
+    </div>
+
+    <!-- Sidebar Settings & Device List (Span 1 col) -->
+    <div class="flex flex-col gap-6">
+
+      <!-- Discovered Peers Card -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-[var(--foreground)]">Discovered Devices</h3>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono">2 Online</span>
+        </div>
+
+        <div class="flex flex-col gap-2.5 text-xs">
+          <!-- Device 1 -->
+          <div class="p-3 rounded-xl bg-[var(--background)] border border-blue-500/40 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold"></div>
+              <div>
+                <div class="font-medium text-[var(--foreground)]">MacBook Pro (This Mac)</div>
+                <div class="text-[10px] text-[var(--muted-foreground)]">192.168.1.105 · Master Host</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-semibold text-emerald-400">Local</span>
+          </div>
+
+          <!-- Device 2 -->
+          <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold">⊞</div>
+              <div>
+                <div class="font-medium text-[var(--foreground)]">Windows PC (win-desktop)</div>
+                <div class="text-[10px] text-[var(--muted-foreground)]">192.168.1.142 · AES Encrypted</div>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400">1.2 ms</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sensitivity & Deadzone Tuning -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <h3 class="text-sm font-semibold text-[var(--foreground)]">Transition Physics</h3>
+
+        <!-- Edge Push Threshold -->
+        <div class="flex flex-col gap-1.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-[var(--foreground)] font-medium">Edge Push Threshold</span>
+            <span id="thresholdVal" class="text-[var(--muted-foreground)] font-mono">2 px</span>
+          </div>
+          <input type="range" id="thresholdSlider" min="1" max="25" value="2" class="w-full accent-blue-600">
+          <span class="text-[10px] text-[var(--muted-foreground)]">Pixels to push against screen border before jumping.</span>
+        </div>
+
+        <!-- Corner Deadzones -->
+        <div class="flex flex-col gap-1.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-[var(--foreground)] font-medium">Corner Dead-Zone</span>
+            <span id="deadzoneVal" class="text-[var(--muted-foreground)] font-mono">20 px</span>
+          </div>
+          <input type="range" id="deadzoneSlider" min="0" max="60" value="20" class="w-full accent-blue-600">
+          <span class="text-[10px] text-[var(--muted-foreground)]">Prevents accidental jumping when clicking window close/menu buttons.</span>
+        </div>
+
+        <!-- Symmetrical Preemption -->
+        <div class="flex items-center justify-between text-xs pt-2 border-t border-[var(--border)]">
+          <div>
+            <div class="font-medium text-[var(--foreground)]">Instant Physical Preemption</div>
+            <div class="text-[10px] text-[var(--muted-foreground)]">Touching follower's mouse reclaims control immediately.</div>
+          </div>
+          <input type="checkbox" checked class="rounded border-[var(--border)] accent-blue-600">
+        </div>
+
+        <!-- Shared Clipboard -->
+        <div class="flex items-center justify-between text-xs">
+          <div>
+            <div class="font-medium text-[var(--foreground)]">Shared Clipboard & Files</div>
+            <div class="text-[10px] text-[var(--muted-foreground)]">Sync formatted text, images, and drag-and-drop.</div>
+          </div>
+          <input type="checkbox" checked class="rounded border-[var(--border)] accent-blue-600">
+        </div>
+      </div>
+
+      <!-- Network Security -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col gap-3 text-xs">
+        <h3 class="text-sm font-semibold text-[var(--foreground)]">Security & Ports</h3>
+        <div>
+          <label class="text-[11px] text-[var(--muted-foreground)]">Pairing Passphrase</label>
+          <div class="mt-1 flex gap-2">
+            <input type="password" id="passphraseInput" value="default-sharemouse-secret" class="flex-1 px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] font-mono">
+            <button id="togglePassBtn" class="px-2.5 py-1 text-xs rounded-lg border border-[var(--border)] bg-[var(--card)]">👁</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[10px] font-mono text-[var(--muted-foreground)] pt-1">
+          <div>UDP Delta: 24800</div>
+          <div>TCP Reliable: 24801</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold shadow-2xl transition-all duration-300 opacity-0 translate-y-4 pointer-events-none flex items-center gap-2">
+    <span>✓</span> <span id="toastMsg">Topology configuration applied!</span>
+  </div>
+
+  <script>
+    // State
+    let isDragging = false;
+    let currentDrag = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    const stage = document.getElementById('stage');
+    const container = document.getElementById('canvasContainer');
+
+    const monitors = [
+      document.getElementById('mon-mac-primary'),
+      document.getElementById('mon-mac-secondary'),
+      document.getElementById('mon-win-pc')
+    ];
+
+    // Drag and Drop implementation
+    monitors.forEach(mon => {
+      mon.addEventListener('pointerdown', (e) => {
+        if (document.getElementById('simCursorMode').checked) return;
+        isDragging = true;
+        currentDrag = mon;
+        mon.style.zIndex = '40';
+        const rect = mon.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
+        mon.setPointerCapture(e.pointerId);
+      });
+
+      mon.addEventListener('pointermove', (e) => {
+        if (!isDragging || currentDrag !== mon) return;
+        const stageRect = stage.getBoundingClientRect();
+        let newX = e.clientX - stageRect.left - dragOffsetX;
+        let newY = e.clientY - stageRect.top - dragOffsetY;
+
+        // Keep inside stage boundaries
+        newX = Math.max(10, Math.min(newX, stageRect.width - mon.offsetWidth - 10));
+        newY = Math.max(10, Math.min(newY, stageRect.height - mon.offsetHeight - 10));
+
+        // Magnetic edge snapping if enabled
+        if (document.getElementById('snapToGrid').checked) {
+          monitors.forEach(other => {
+            if (other === mon) return;
+            const ox = other.offsetLeft;
+            const oy = other.offsetTop;
+            const ow = other.offsetWidth;
+            const oh = other.offsetHeight;
+
+            // Snap right edge of mon to left edge of other
+            if (Math.abs((newX + mon.offsetWidth) - ox) < 16) {
+              newX = ox - mon.offsetWidth;
+            }
+            // Snap left edge of mon to right edge of other
+            if (Math.abs(newX - (ox + ow)) < 16) {
+              newX = ox + ow;
+            }
+            // Snap vertical alignment
+            if (Math.abs(newY - oy) < 16) {
+              newY = oy;
+            }
+          });
+        }
+
+        mon.style.left = `${newX}px`;
+        mon.style.top = `${newY}px`;
+        updateTopologyInfo();
+      });
+
+      mon.addEventListener('pointerup', (e) => {
+        if (currentDrag === mon) {
+          mon.style.zIndex = '10';
+          isDragging = false;
+          currentDrag = null;
+          updateTopologyInfo();
+        }
+      });
+    });
+
+    // Update coordinates and topological adjacency
+    function updateTopologyInfo() {
+      // Sort monitors by X position
+      const sorted = [...monitors].sort((a, b) => a.offsetLeft - b.offsetLeft);
+      const names = sorted.map(m => m.getAttribute('data-name'));
+
+      document.getElementById('logStatusText').textContent = 
+        `Active Left-to-Right Topology: [${names.join('] ⇄ [')}]`;
+
+      // Update coordinate badges
+      sorted.forEach((m, idx) => {
+        const coordSpan = m.querySelector('.coord-label');
+        if (coordSpan) {
+          coordSpan.textContent = `Pos #${idx + 1} (${m.offsetLeft}px)`;
+        }
+      });
+    }
+
+    // Cursor Simulation Mode
+    const testCursor = document.getElementById('testCursor');
+    const simCheckbox = document.getElementById('simCursorMode');
+
+    container.addEventListener('mousemove', (e) => {
+      if (!simCheckbox.checked) return;
+      const stageRect = stage.getBoundingClientRect();
+      const curX = e.clientX - stageRect.left;
+      const curY = e.clientY - stageRect.top;
+
+      testCursor.style.left = `${curX}px`;
+      testCursor.style.top = `${curY}px`;
+
+      // Calculate which monitor cursor is currently in
+      let insideMonitor = null;
+      monitors.forEach(m => {
+        const x = m.offsetLeft;
+        const y = m.offsetTop;
+        const w = m.offsetWidth;
+        const h = m.offsetHeight;
+        if (curX >= x && curX <= x + w && curY >= y && curY <= y + h) {
+          insideMonitor = m;
+        }
+      });
+
+      if (insideMonitor) {
+        const normY = ((curY - insideMonitor.offsetTop) / insideMonitor.offsetHeight).toFixed(2);
+        const monName = insideMonitor.getAttribute('data-name');
+        document.getElementById('calcDetails').textContent = 
+          `Host: ${monName} | Normalized Y: ${normY} ➔ Cross-device Y translation ready`;
+      }
+    });
+
+    simCheckbox.addEventListener('change', () => {
+      if (simCheckbox.checked) {
+        testCursor.classList.remove('hidden');
+        container.style.cursor = 'none';
+      } else {
+        testCursor.classList.add('hidden');
+        container.style.cursor = 'default';
+      }
+    });
+
+    // Physics sliders
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const thresholdVal = document.getElementById('thresholdVal');
+    thresholdSlider.addEventListener('input', () => {
+      thresholdVal.textContent = `${thresholdSlider.value} px`;
+    });
+
+    const deadzoneSlider = document.getElementById('deadzoneSlider');
+    const deadzoneVal = document.getElementById('deadzoneVal');
+    deadzoneSlider.addEventListener('input', () => {
+      deadzoneVal.textContent = `${deadzoneSlider.value} px`;
+    });
+
+    // Password toggle
+    const passInput = document.getElementById('passphraseInput');
+    const togglePassBtn = document.getElementById('togglePassBtn');
+    togglePassBtn.addEventListener('click', () => {
+      passInput.type = passInput.type === 'password' ? 'text' : 'password';
+    });
+
+    // Save configuration toast
+    const saveBtn = document.getElementById('saveConfigBtn');
+    const toast = document.getElementById('toast');
+    saveBtn.addEventListener('click', () => {
+      toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+      }, 3000);
+    });
+
+    // Reset layout
+    document.getElementById('resetLayoutBtn').addEventListener('click', () => {
+      monitors[0].style.left = '60px';
+      monitors[0].style.top = '100px';
+      monitors[1].style.left = '330px';
+      monitors[1].style.top = '100px';
+      monitors[2].style.left = '520px';
+      monitors[2].style.top = '100px';
+      updateTopologyInfo();
+    });
+
+    // Initial calculation
+    updateTopologyInfo();
+  </script>
+</body>
+</html>
