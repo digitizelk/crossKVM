@@ -48,11 +48,11 @@ impl InputCapturer for WinInputCapturer {
             use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
             use windows::Win32::UI::Input::KeyboardAndMouse::GetKeyState;
             use windows::Win32::UI::WindowsAndMessaging::{
-                CallNextHookEx, DispatchMessageW, GetMessageW, PostThreadMessageW,
+                CallNextHookEx, DispatchMessageW, GetMessageW,
                 SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HHOOK, KBDLLHOOKSTRUCT,
-                MSLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP,
+                MSLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYUP,
                 WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE,
-                WM_MOUSEWHEEL, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+                WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYUP,
             };
 
             static GLOBAL_CB: Mutex<Option<Arc<EventFilterCallback>>> = Mutex::new(None);
@@ -110,7 +110,7 @@ impl InputCapturer for WinInputCapturer {
                         }
                     }
                 }
-                CallNextHookEx(HHOOK(0), code, wparam, lparam)
+                CallNextHookEx(HHOOK(std::ptr::null_mut()), code, wparam, lparam)
             }
 
             unsafe extern "system" fn keyboard_hook_proc(
@@ -157,7 +157,7 @@ impl InputCapturer for WinInputCapturer {
                         }
                     }
                 }
-                CallNextHookEx(HHOOK(0), code, wparam, lparam)
+                CallNextHookEx(HHOOK(std::ptr::null_mut()), code, wparam, lparam)
             }
 
             let is_running = self.is_running.clone();
@@ -166,18 +166,18 @@ impl InputCapturer for WinInputCapturer {
                 let mouse_hook = SetWindowsHookExW(
                     WH_MOUSE_LL,
                     Some(mouse_hook_proc),
-                    HINSTANCE(0),
+                    HINSTANCE(std::ptr::null_mut()),
                     0,
                 );
                 let kbd_hook = SetWindowsHookExW(
                     WH_KEYBOARD_LL,
                     Some(keyboard_hook_proc),
-                    HINSTANCE(0),
+                    HINSTANCE(std::ptr::null_mut()),
                     0,
                 );
 
                 let mut msg = MSG::default();
-                while is_running.load(Ordering::SeqCst) && GetMessageW(&mut msg, HWND(0), 0, 0).as_bool() {
+                while is_running.load(Ordering::SeqCst) && GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0).as_bool() {
                     let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 }

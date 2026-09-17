@@ -1,4 +1,4 @@
-use kvm_core::protocol::{ClipboardFormat, DisplayInfo, InputEvent};
+use kvm_core::protocol::{DisplayInfo, InputEvent};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

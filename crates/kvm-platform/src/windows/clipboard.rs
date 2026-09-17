@@ -18,14 +18,14 @@ impl ClipboardHandler for WinClipboard {
     fn read_text(&self) -> Result<Option<String>, PlatformError> {
         #[cfg(target_os = "windows")]
         {
-            use windows::Win32::Foundation::{HANDLE, HWND};
+            use windows::Win32::Foundation::HWND;
             use windows::Win32::System::DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard};
             use windows::Win32::System::Memory::{GlobalLock, GlobalUnlock};
 
             const CF_UNICODETEXT: u32 = 13;
 
             unsafe {
-                if !OpenClipboard(HWND(0)).as_bool() {
+                if OpenClipboard(HWND(std::ptr::null_mut())).is_err() {
                     return Ok(None);
                 }
 
@@ -78,7 +78,7 @@ impl ClipboardHandler for WinClipboard {
             let size = wide.len() * 2;
 
             unsafe {
-                if !OpenClipboard(HWND(0)).as_bool() {
+                if OpenClipboard(HWND(std::ptr::null_mut())).is_err() {
                     return Err(PlatformError::OsError("Failed to open Windows clipboard".into()));
                 }
 

@@ -27,11 +27,11 @@ impl InputInjector for WinInputInjector {
         {
             use std::mem::size_of;
             use windows::Win32::UI::Input::KeyboardAndMouse::{
-                SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
+                SendInput, INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
                 KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, MOUSEEVENTF_ABSOLUTE,
                 MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN,
                 MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
-                MOUSEEVENTF_WHEEL, MOUSEINPUT, MOUSE_EVENT_FLAGS, VIRTUAL_KEY,
+                MOUSEEVENTF_WHEEL, MOUSEINPUT, VIRTUAL_KEY,
             };
 
             let mut input = INPUT::default();
@@ -103,7 +103,7 @@ impl InputInjector for WinInputInjector {
                     input.Anonymous.mi = MOUSEINPUT {
                         dx: 0,
                         dy: 0,
-                        mouseData: (*delta_y as i32) * 120, // 120 = WHEEL_DELTA
+                        mouseData: ((*delta_y as i32) * 120) as u32, // 120 = WHEEL_DELTA
                         dwFlags: MOUSEEVENTF_WHEEL,
                         time: 0,
                         dwExtraInfo: 0,

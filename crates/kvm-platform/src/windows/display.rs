@@ -67,7 +67,7 @@ impl ScreenManager for WinScreenManager {
             let mut displays: Vec<DisplayInfo> = Vec::new();
             unsafe {
                 let lparam = LPARAM(&mut displays as *mut _ as isize);
-                EnumDisplayMonitors(HDC(0), None, Some(monitor_enum_proc), lparam);
+                EnumDisplayMonitors(HDC(std::ptr::null_mut()), None, Some(monitor_enum_proc), lparam);
             }
 
             if displays.is_empty() {
