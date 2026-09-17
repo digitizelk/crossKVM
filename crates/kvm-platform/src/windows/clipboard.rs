@@ -18,7 +18,7 @@ impl ClipboardHandler for WinClipboard {
     fn read_text(&self) -> Result<Option<String>, PlatformError> {
         #[cfg(target_os = "windows")]
         {
-            use windows::Win32::Foundation::HWND;
+            use windows::Win32::Foundation::{HGLOBAL, HWND};
             use windows::Win32::System::DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard};
             use windows::Win32::System::Memory::{GlobalLock, GlobalUnlock};
 
@@ -35,7 +35,8 @@ impl ClipboardHandler for WinClipboard {
                     return Ok(None);
                 }
 
-                let ptr = GlobalLock(handle.unwrap().0 as _);
+                let hglobal = HGLOBAL(handle.unwrap().0);
+                let ptr = GlobalLock(hglobal);
                 if ptr.is_null() {
                     let _ = CloseClipboard();
                     return Ok(None);
@@ -51,7 +52,7 @@ impl ClipboardHandler for WinClipboard {
                 };
 
                 let text = String::from_utf16_lossy(wide_slice);
-                let _ = GlobalUnlock(handle.unwrap().0 as _);
+                let _ = GlobalUnlock(hglobal);
                 let _ = CloseClipboard();
                 Ok(Some(text))
             }
@@ -66,7 +67,7 @@ impl ClipboardHandler for WinClipboard {
     fn write_text(&self, text: &str) -> Result<(), PlatformError> {
         #[cfg(target_os = "windows")]
         {
-            use windows::Win32::Foundation::{HANDLE, HWND};
+            use windows::Win32::Foundation::{HANDLE, HGLOBAL, HWND};
             use windows::Win32::System::DataExchange::{
                 CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
             };
@@ -86,10 +87,10 @@ impl ClipboardHandler for WinClipboard {
 
                 let hmem = GlobalAlloc(GMEM_MOVEABLE, size);
                 if let Ok(mem) = hmem {
-                    let ptr = GlobalLock(mem.0 as _);
+                    let ptr = GlobalLock(mem);
                     if !ptr.is_null() {
                         std::ptr::copy_nonoverlapping(wide.as_ptr() as *const u8, ptr as *mut u8, size);
-                        let _ = GlobalUnlock(mem.0 as _);
+                        let _ = GlobalUnlock(mem);
                         let _ = SetClipboardData(CF_UNICODETEXT, HANDLE(mem.0));
                     }
                 }
